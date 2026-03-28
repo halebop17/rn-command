@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RenoiseScriptingTool doc_version="0">
+  <Name>RN Command Panel</Name>
+  <Id>com.user.RNCommandPanel</Id>
+  <Version>1.17</Version>
+  <Author>User</Author>
+  <ApiVersion>6</ApiVersion>
+  <Description>RN Command Panel - Effect commands, note column values, full Reform-style note transforms, quick flicks.</Description>
+</RenoiseScriptingTool>
