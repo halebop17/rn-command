@@ -1,7 +1,9 @@
 # RN Commander Renoise Plugin
 
 This is a xrnx plugin for Renoise.    
+
 I put this together for my own use. It is a mix of features from some of my favorite tools by other plugin developers such as Paketti (Check it out, it has hundreds of useful extensions for Renoise).       
+
 I just wanted to combine stuff into one plugin and make it all more efficient on my system by reducing plugins I need to load separately when starting up Renoise. 
 
 It can:
