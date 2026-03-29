@@ -1,5 +1,5 @@
 --[[============================================================
-  RN Command Panel for Renoise  v1.5
+  RN Commander for Renoise  v1.22
   Full Reform-style transforms + Effect commands + Quick Flicks
 ============================================================]]--
 
@@ -86,14 +86,15 @@ local write_mode = 1  -- 1 = effect columns, 2 = sample FX note sub-col
 
 local g_rand = {
   enabled = true,
-  fill_prob = 34,
+  fill_prob = 50,
   whole_if_none = false,
   minmax_only = false,
   dont_overwrite = false,
+  lock_current_effects = false,
   only_rows_with_effects = false,
   only_rows_with_notes = false,
   min_val = 0,
-  max_val = 98,
+  max_val = 255,
 }
 
 -- Get note column via indices (works even when dialog has focus)
@@ -587,14 +588,20 @@ local function randomize_effect_values(opts)
         local c = line:effect_column(ci)
         if not c.is_empty then
           visited = visited + 1
-          if math.random(100) <= opts.fill_prob then
-            if (not opts.dont_overwrite) or c.amount_value == 0 then
-              c.amount_value = rand_amount()
+          if opts.lock_current_effects then
+            -- Lock presence: never add/remove, always re-randomize current effect amounts.
+            c.amount_value = rand_amount()
+            changed = changed + 1
+          else
+            if math.random(100) <= opts.fill_prob then
+              if (not opts.dont_overwrite) or c.amount_value == 0 then
+                c.amount_value = rand_amount()
+                changed = changed + 1
+              end
+            elseif not opts.dont_overwrite then
+              c:clear()
               changed = changed + 1
             end
-          elseif not opts.dont_overwrite then
-            c:clear()
-            changed = changed + 1
           end
         end
       end
@@ -603,15 +610,21 @@ local function randomize_effect_values(opts)
         local n = line:note_column(ci)
         if n.effect_number_string ~= ".." and n.effect_number_string ~= "00" then
           visited = visited + 1
-          if math.random(100) <= opts.fill_prob then
-            if (not opts.dont_overwrite) or n.effect_amount_value == 0 then
-              n.effect_amount_value = rand_amount()
+          if opts.lock_current_effects then
+            -- Lock presence: never add/remove, always re-randomize current sample-FX amounts.
+            n.effect_amount_value = rand_amount()
+            changed = changed + 1
+          else
+            if math.random(100) <= opts.fill_prob then
+              if (not opts.dont_overwrite) or n.effect_amount_value == 0 then
+                n.effect_amount_value = rand_amount()
+                changed = changed + 1
+              end
+            elseif not opts.dont_overwrite then
+              n.effect_number_string = ".."
+              n.effect_amount_string = "00"
               changed = changed + 1
             end
-          elseif not opts.dont_overwrite then
-            n.effect_number_string = ".."
-            n.effect_amount_string = "00"
-            changed = changed + 1
           end
         end
       end
@@ -1133,47 +1146,7 @@ local function build_gui()
   local dly_txt = vb:text{text="00",width=28,style="strong"}
   local fxa_txt = vb:text{text="00",width=28,style="strong"}
   local sfxa_txt = vb:text{text="00",width=28,style="strong"}
-
-  local col_vals_panel = vb:column {
-    margin=4, spacing=6,
-    vb:text{text="Note Column Values",style="strong"},
-    vb:text{text="Drag slider to apply to selected note column",font="italic"},
-    vb:space{height=2},
-    vb:row{
-      vb:text{text="Volume", width=55},
-      vb:slider{min=0,max=127,value=64,width=160,
-        notifier=function(v) g_vol_val=math.floor(v); vol_txt.text=hex2(v); set_volume(g_vol_val) end},
-      vol_txt,
-    },
-    vb:row{
-      vb:text{text="Panning",width=55},
-      vb:slider{min=0,max=128,value=128,width=160,
-        notifier=function(v) g_pan_val=math.floor(v); pan_txt.text=hex2(v); set_panning(g_pan_val) end},
-      pan_txt,
-    },
-    vb:row{
-      vb:text{text="Delay",  width=55},
-      vb:slider{min=0,max=255,value=0,width=160,
-        notifier=function(v) g_dly_val=math.floor(v); dly_txt.text=hex2(v); set_delay(g_dly_val) end},
-      dly_txt,
-    },
-    vb:space{height=6},
-    vb:text{text="Effect Amount",style="strong"},
-    vb:text{text="Drag slider to apply to selected effect column",font="italic"},
-    vb:space{height=2},
-    vb:row{
-      vb:text{text="Effect", width=55},
-      vb:slider{min=0,max=255,value=0,width=160,
-        notifier=function(v) g_fxa_val=math.floor(v); fxa_txt.text=hex2(v); set_fx_amount(g_fxa_val) end},
-      fxa_txt,
-    },
-    vb:row{
-      vb:text{text="Sample FX", width=55},
-      vb:slider{min=0,max=255,value=0,width=160,
-        notifier=function(v) g_sfxa_val=math.floor(v); sfxa_txt.text=hex2(v); set_sample_fx_amount(g_sfxa_val) end},
-      sfxa_txt,
-    },
-  }
+  local col_vals_panel = nil
 
   -- ── Transforms panel (Reform-style) ─────────────────────
 
@@ -1472,10 +1445,51 @@ local function build_gui()
     },
   }
 
-  local qf_panel = vb:column {
+  col_vals_panel = vb:column {
     margin=4, spacing=6,
     sel_range_panel,
-    vb:space{height=4},
+    vb:space{height=6},
+    vb:text{text="Note Column Values",style="strong"},
+    vb:text{text="Drag slider to apply to selected note column",font="italic"},
+    vb:space{height=2},
+    vb:row{
+      vb:text{text="Volume", width=55},
+      vb:slider{min=0,max=127,value=64,width=160,
+        notifier=function(v) g_vol_val=math.floor(v); vol_txt.text=hex2(v); set_volume(g_vol_val) end},
+      vol_txt,
+    },
+    vb:row{
+      vb:text{text="Panning",width=55},
+      vb:slider{min=0,max=128,value=128,width=160,
+        notifier=function(v) g_pan_val=math.floor(v); pan_txt.text=hex2(v); set_panning(g_pan_val) end},
+      pan_txt,
+    },
+    vb:row{
+      vb:text{text="Delay",  width=55},
+      vb:slider{min=0,max=255,value=0,width=160,
+        notifier=function(v) g_dly_val=math.floor(v); dly_txt.text=hex2(v); set_delay(g_dly_val) end},
+      dly_txt,
+    },
+    vb:space{height=6},
+    vb:text{text="Effect Amount",style="strong"},
+    vb:text{text="Drag slider to apply to selected effect column",font="italic"},
+    vb:space{height=2},
+    vb:row{
+      vb:text{text="Effect", width=55},
+      vb:slider{min=0,max=255,value=0,width=160,
+        notifier=function(v) g_fxa_val=math.floor(v); fxa_txt.text=hex2(v); set_fx_amount(g_fxa_val) end},
+      fxa_txt,
+    },
+    vb:row{
+      vb:text{text="Sample FX", width=55},
+      vb:slider{min=0,max=255,value=0,width=160,
+        notifier=function(v) g_sfxa_val=math.floor(v); sfxa_txt.text=hex2(v); set_sample_fx_amount(g_sfxa_val) end},
+      sfxa_txt,
+    },
+  }
+
+  local qf_panel = vb:column {
+    margin=4, spacing=6,
     vb:text{text="Volume fade (0I=ramp up, 0O=ramp down):",style="strong"},
     vb:row{
       vb:button{text="Ramp Up",  width=80,
@@ -1502,6 +1516,7 @@ local function build_gui()
     vb:space{height=4},
     vb:text{text="Retrigger (0Rxy to effect col):",style="strong"},
     vb:row{
+      vb:button{text="R01",   width=50,notifier=function() qf_retrig("0R","01") end},
       vb:button{text="R02",   width=50,notifier=function() qf_retrig("0R","02") end},
       vb:button{text="R04",   width=50,notifier=function() qf_retrig("0R","04") end},
       vb:button{text="R08",   width=50,notifier=function() qf_retrig("0R","08") end},
@@ -1551,6 +1566,10 @@ local function build_gui()
       vb:text{text="Don't Overwrite Existing Data"},
     },
     vb:row{
+      vb:checkbox{value=g_rand.lock_current_effects, notifier=function(v) g_rand.lock_current_effects=v end},
+      vb:text{text="Lock all current effects"},
+    },
+    vb:row{
       vb:checkbox{value=g_rand.only_rows_with_effects, notifier=function(v) g_rand.only_rows_with_effects=v end},
       vb:text{text="Only Modify Rows With Effects"},
     },
@@ -1591,6 +1610,7 @@ local function build_gui()
           whole_if_none = g_rand.whole_if_none,
           minmax_only = g_rand.minmax_only,
           dont_overwrite = g_rand.dont_overwrite,
+          lock_current_effects = g_rand.lock_current_effects,
           only_rows_with_effects = g_rand.only_rows_with_effects,
           only_rows_with_notes = g_rand.only_rows_with_notes,
           min_val = g_rand.min_val,
@@ -1606,7 +1626,7 @@ local function build_gui()
   right_holder:add_child(col_vals_panel)
 
   local sec_switch = vb:switch {
-    items = {"Col Values","Quickies","Randomizer"},
+    items = {"Main","Quickies","Randomizer"},
     width = 310,
     notifier = function(idx)
       if idx == current_right then return end
@@ -1637,23 +1657,24 @@ local function show_tool()
   g_vol_lo=0; g_vol_hi=127; g_pan_lo=0; g_pan_hi=255
   g_fx_lo=0;  g_fx_hi=255
   g_rand.enabled = true
-  g_rand.fill_prob = 34
+  g_rand.fill_prob = 50
   g_rand.whole_if_none = false
   g_rand.minmax_only = false
   g_rand.dont_overwrite = false
+  g_rand.lock_current_effects = false
   g_rand.only_rows_with_effects = false
   g_rand.only_rows_with_notes = false
   g_rand.min_val = 0
-  g_rand.max_val = 98
+  g_rand.max_val = 255
   write_mode=1
-  g_dialog = renoise.app():show_custom_dialog("RN Command Panel", build_gui())
+  g_dialog = renoise.app():show_custom_dialog("RN Commander", build_gui())
 end
 
 -- ============================================================
 -- REGISTRATION
 -- ============================================================
 
-renoise.tool():add_menu_entry{name="Main Menu:Tools:RN Command Panel",invoke=show_tool}
-renoise.tool():add_menu_entry{name="Pattern Editor:RN Command Panel",invoke=show_tool}
-renoise.tool():add_keybinding{name="Global:Tools:Show RN Command Panel",invoke=show_tool}
-renoise.tool():add_keybinding{name="Pattern Editor:Tools:Show RN Command Panel",invoke=show_tool}
+renoise.tool():add_menu_entry{name="Main Menu:Tools:RN Commander",invoke=show_tool}
+renoise.tool():add_menu_entry{name="Pattern Editor:RN Commander",invoke=show_tool}
+renoise.tool():add_keybinding{name="Global:Tools:Show RN Commander",invoke=show_tool}
+renoise.tool():add_keybinding{name="Pattern Editor:Tools:Show RN Commander",invoke=show_tool}
