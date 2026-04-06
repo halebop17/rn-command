@@ -1,5 +1,5 @@
 --[[============================================================
-  RN Commander for Renoise  v1.22
+  Command Panel for Renoise  v1.22
   Full Reform-style transforms + Effect commands + Quick Flicks
 ============================================================]]--
 
@@ -1667,14 +1667,14 @@ local function show_tool()
   g_rand.min_val = 0
   g_rand.max_val = 255
   write_mode=1
-  g_dialog = renoise.app():show_custom_dialog("RN Commander", build_gui())
+  g_dialog = renoise.app():show_custom_dialog("Command Panel", build_gui())
 end
 
 -- ============================================================
 -- REGISTRATION
 -- ============================================================
 
-renoise.tool():add_menu_entry{name="Main Menu:Tools:RN Commander",invoke=show_tool}
-renoise.tool():add_menu_entry{name="Pattern Editor:RN Commander",invoke=show_tool}
-renoise.tool():add_keybinding{name="Global:Tools:Show RN Commander",invoke=show_tool}
-renoise.tool():add_keybinding{name="Pattern Editor:Tools:Show RN Commander",invoke=show_tool}
+renoise.tool():add_menu_entry{name="Main Menu:Tools:Command Panel",invoke=show_tool}
+renoise.tool():add_menu_entry{name="Pattern Editor:Command Panel",invoke=show_tool}
+renoise.tool():add_keybinding{name="Global:Tools:Show Command Panel",invoke=show_tool}
+renoise.tool():add_keybinding{name="Pattern Editor:Tools:Show Command Panel",invoke=show_tool}

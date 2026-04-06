@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <RenoiseScriptingTool doc_version="0">
-  <Name>RN Commander</Name>
-  <Id>com.user.RNCommandPanel</Id>
+  <Name>Command Panel</Name>
+  <Id>com.halebop.commandpanel</Id>
   <Version>1.22</Version>
   <Author>User</Author>
   <ApiVersion>6</ApiVersion>
